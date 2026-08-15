@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B0D0F">
+<title>Decision Wheel</title>
+<style>
+  :root{
+    --black:#0B0D0F;
+    --panel:#15181B;
+    --panel2:#1C2024;
+    --line:#2A2F34;
+    --amber:#FFB000;
+    --redline:#FF3D00;
+    --teal:#00E5C7;
+    --text:#E8E6E1;
+    --text-dim:#8A9096;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--black);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",system-ui,sans-serif;
+    overscroll-behavior:none;
+    user-select:none;
+  }
+  body{
+    padding-top:env(safe-area-inset-top);
+    padding-bottom:env(safe-area-inset-bottom);
+    display:flex; flex-direction:column; height:100vh; overflow:hidden;
+  }
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 16px 10px;
+    border-bottom:1px solid var(--line);
+    flex-shrink:0;
+  }
+  .brand{
+    font-family:"Courier New",monospace;
+    font-weight:800;
+    letter-spacing:0.08em;
+    font-size:15px;
+    text-transform:uppercase;
+    color:var(--text);
+  }
+  .brand span{color:var(--amber);}
+  .wheel-select{
+    background:var(--panel2);
+    border:1px solid var(--line);
+    color:var(--text);
+    font-size:13px;
+    padding:7px 10px;
+    border-radius:8px;
+    max-width:150px;
+    font-family:inherit;
+  }
+  .icon-btn{
+    background:var(--panel2);
+    border:1px solid var(--line);
+    color:var(--text-dim);
+    width:34px; height:34px;
+    border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:16px;
+    flex-shrink:0;
+  }
+  .icon-btn:active{background:var(--line); color:var(--amber);}
+  .topbar-right{display:flex; gap:8px; align-items:center;}
+
+  .stage{
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:10px 20px; min-height:0; position:relative;
+  }
+  .wheel-wrap{
+    position:relative;
+    width:min(82vw, 62vh);
+    aspect-ratio:1/1;
+    flex-shrink:0;
+  }
+  canvas{width:100%; height:100%; display:block; touch-action:none;}
+  .pointer{
+    position:absolute; top:-2px; left:50%; transform:translateX(-50%);
+    width:0; height:0;
+    border-left:12px solid transparent;
+    border-right:12px solid transparent;
+    border-top:22px solid var(--redline);
+    filter:drop-shadow(0 2px 3px rgba(0,0,0,0.6));
+    z-index:5;
+  }
+  .hub-btn{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:22%; height:22%; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #2a2f34, #0B0D0F 70%);
+    border:2px solid var(--amber);
+    color:var(--amber);
+    font-family:"Courier New",monospace;
+    font-weight:800;
+    font-size:clamp(11px,2.6vw,15px);
+    letter-spacing:0.05em;
+    display:flex; align-items:center; justify-content:center;
+    z-index:6;
+    box-shadow:0 0 0 4px rgba(255,176,0,0.08);
+  }
+  .hub-btn:active{transform:translate(-50%,-50%) scale(0.95);}
+  .hub-btn.spinning{color:var(--text-dim); border-color:var(--line);}
+
+  .result-banner{
+    margin-top:16px;
+    min-height:52px;
+    display:flex; align-items:center; justify-content:center;
+    text-align:center;
+    padding:0 12px;
+  }
+  .result-text{
+    font-family:"Courier New",monospace;
+    font-weight:800;
+    font-size:clamp(18px,5vw,26px);
+    color:var(--teal);
+    letter-spacing:0.02em;
+    animation:pop 0.35s ease;
+  }
+  @keyframes pop{ from{transform:scale(0.85); opacity:0;} to{transform:scale(1); opacity:1;} }
+  .result-hint{
+    font-size:12px; color:var(--text-dim);
+  }
+
+  .drawer-toggle{
+    flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    gap:6px;
+    padding:10px;
+    color:var(--text-dim);
+    font-size:12px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    border-top:1px solid var(--line);
+  }
+  .drawer{
+    flex-shrink:0;
+    max-height:0;
+    overflow:hidden;
+    transition:max-height 0.28s ease;
+    background:var(--panel);
+    border-top:1px solid var(--line);
+  }
+  .drawer.open{max-height:42vh;}
+  .drawer-inner{
+    padding:12px 16px calc(16px + env(safe-area-inset-bottom));
+    overflow-y:auto;
+    max-height:42vh;
+  }
+  .opt-row{
+    display:flex; align-items:center; gap:10px;
+    padding:8px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .opt-swatch{width:12px; height:12px; border-radius:3px; flex-shrink:0;}
+  .opt-name{
+    flex:1; background:transparent; border:none; color:var(--text);
+    font-size:14px; font-family:inherit; padding:6px 4px;
+    min-width:0;
+  }
+  .opt-name:focus{outline:none;}
+  .weight-ctrl{display:flex; align-items:center; gap:6px; flex-shrink:0;}
+  .weight-btn{
+    width:26px; height:26px; border-radius:6px;
+    background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center;
+  }
+  .weight-btn:active{background:var(--line);}
+  .weight-val{
+    width:28px; text-align:center; font-size:13px; color:var(--amber);
+    font-family:"Courier New",monospace; font-weight:700;
+  }
+  .del-btn{
+    width:26px; height:26px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--redline); font-size:16px;
+  }
+  .add-row{
+    display:flex; gap:8px; margin-top:10px;
+  }
+  .add-input{
+    flex:1; background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    font-size:14px; padding:9px 10px; border-radius:8px; font-family:inherit;
+  }
+  .add-input:focus{outline:1px solid var(--amber);}
+  .add-btn{
+    background:var(--amber); color:#0B0D0F; border:none; font-weight:800;
+    padding:0 16px; border-radius:8px; font-size:14px;
+  }
+  .add-btn:active{opacity:0.8;}
+  .empty-note{color:var(--text-dim); font-size:13px; text-align:center; padding:16px 0;}
+
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.6);
+    display:flex; align-items:center; justify-content:center;
+    z-index:50; padding:24px;
+  }
+  .modal{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:20px; width:100%; max-width:320px;
+  }
+  .modal h3{margin:0 0 12px; font-size:15px; color:var(--text);}
+  .modal input{
+    width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    padding:10px 12px; border-radius:8px; font-size:15px; margin-bottom:14px; font-family:inherit;
+  }
+  .modal-actions{display:flex; gap:8px; justify-content:flex-end;}
+  .modal-btn{
+    padding:9px 16px; border-radius:8px; border:none; font-size:14px; font-weight:700;
+  }
+  .modal-btn.cancel{background:var(--panel2); color:var(--text-dim);}
+  .modal-btn.confirm{background:var(--amber); color:#0B0D0F;}
+  .modal-btn.danger{background:var(--redline); color:#fff;}
+  .hidden{display:none !important;}
+  .install-banner{
+    position:fixed; left:16px; right:16px; bottom:calc(16px + env(safe-area-inset-bottom));
+    background:var(--panel2); border:1px solid var(--amber); border-radius:10px;
+    padding:10px 12px; font-size:12px; color:var(--text-dim); z-index:40;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .install-banner b{color:var(--amber);}
+  .install-close{color:var(--text-dim); font-size:18px; padding:2px 6px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">DECISION<span>_WHEEL</span></div>
+  <div class="topbar-right">
+    <select class="wheel-select" id="wheelSelect"></select>
+    <button class="icon-btn" id="newWheelBtn" title="New wheel">＋</button>
+    <button class="icon-btn" id="renameWheelBtn" title="Rename">✎</button>
+    <button class="icon-btn" id="deleteWheelBtn" title="Delete wheel">🗑</button>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="wheel-wrap">
+    <div class="pointer"></div>
+    <canvas id="wheelCanvas" width="600" height="600"></canvas>
+    <button class="hub-btn" id="spinBtn">SPIN</button>
+  </div>
+  <div class="result-banner">
+    <div id="resultArea">
+      <div class="result-hint" id="resultHint">Add options below, then spin.</div>
+    </div>
+  </div>
+</div>
+
+<div class="drawer-toggle" id="drawerToggle">▲ Edit options</div>
+<div class="drawer" id="drawer">
+  <div class="drawer-inner">
+    <div id="optList"></div>
+    <div class="add-row">
+      <input class="add-input" id="newOptInput" placeholder="Add option…" maxlength="40">
+      <button class="add-btn" id="addOptBtn">Add</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal">
+    <h3 id="modalTitle">Wheel name</h3>
+    <input id="modalInput" maxlength="30">
+    <div class="modal-actions">
+      <button class="modal-btn cancel" id="modalCancel">Cancel</button>
+      <button class="modal-btn confirm" id="modalConfirm">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- Storage ----------
+  var STORAGE_KEY = "dw_wheels_v1";
+  var COLORS = ["#FF3D00","#FFB000","#00E5C7","#5B8DEF","#B25CFF","#FF6B9D","#4CD97B","#FF8A3D","#00B4D8","#C9A227"];
+
+  function uid(){ return Math.random().toString(36).slice(2,10); }
+
+  function loadData(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(raw) return JSON.parse(raw);
+    }catch(e){}
+    var defaultId = uid();
+    return {
+      activeId: defaultId,
+      wheels: [{
+        id: defaultId,
+        name: "Where to eat",
+        options: [
+          {id:uid(), name:"Tacos", weight:3},
+          {id:uid(), name:"Sushi", weight:2},
+          {id:uid(), name:"Wings", weight:2},
+          {id:uid(), name:"Stay home", weight:1}
+        ]
+      }]
+    };
+  }
+  function saveData(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }catch(e){}
+  }
+
+  var data = loadData();
+
+  function getActiveWheel(){
+    var w = data.wheels.find(function(w){return w.id === data.activeId;});
+    if(!w){ w = data.wheels[0]; data.activeId = w ? w.id : null; }
+    return w;
+  }
+
+  // ---------- DOM refs ----------
+  var canvas = document.getElementById('wheelCanvas');
+  var ctx = canvas.getContext('2d');
+  var spinBtn = document.getElementById('spinBtn');
+  var resultArea = document.getElementById('resultArea');
+  var optList = document.getElementById('optList');
+  var newOptInput = document.getElementById('newOptInput');
+  var addOptBtn = document.getElementById('addOptBtn');
+  var wheelSelect = document.getElementById('wheelSelect');
+  var newWheelBtn = document.getElementById('newWheelBtn');
+  var renameWheelBtn = document.getElementById('renameWheelBtn');
+  var deleteWheelBtn = document.getElementById('deleteWheelBtn');
+  var drawerToggle = document.getElementById('drawerToggle');
+  var drawer = document.getElementById('drawer');
+  var modalOverlay = document.getElementById('modalOverlay');
+  var modalTitle = document.getElementById('modalTitle');
+  var modalInput = document.getElementById('modalInput');
+  var modalCancel = document.getElementById('modalCancel');
+  var modalConfirm = document.getElementById('modalConfirm');
+
+  var rotation = 0; // current rotation in radians
+  var spinning = false;
+
+  // ---------- Render: wheel selector ----------
+  function renderWheelSelect(){
+    wheelSelect.innerHTML = "";
+    data.wheels.forEach(function(w){
+      var opt = document.createElement('option');
+      opt.value = w.id;
+      opt.textContent = w.name;
+      if(w.id === data.activeId) opt.selected = true;
+      wheelSelect.appendChild(opt);
+    });
+  }
+
+  // ---------- Render: option list ----------
+  function renderOptList(){
+    var wheel = getActiveWheel();
+    optList.innerHTML = "";
+    if(!wheel || wheel.options.length === 0){
+      optList.innerHTML = '<div class="empty-note">No options yet. Add at least 2 below.</div>';
+      return;
+    }
+    wheel.options.forEach(function(o, idx){
+      var row = document.createElement('div');
+      row.className = 'opt-row';
+
+      var sw = document.createElement('div');
+      sw.className = 'opt-swatch';
+      sw.style.background = COLORS[idx % COLORS.length];
+      row.appendChild(sw);
+
+      var nameInput = document.createElement('input');
+      nameInput.className = 'opt-name';
+      nameInput.value = o.name;
+      nameInput.addEventListener('change', function(){
+        o.name = nameInput.value.trim() || o.name;
+        saveData();
+        drawWheel();
+      });
+      row.appendChild(nameInput);
+
+      var wc = document.createElement('div');
+      wc.className = 'weight-ctrl';
+
+      var minus = document.createElement('button');
+      minus.className = 'weight-btn';
+      minus.textContent = '−';
+      minus.addEventListener('click', function(){
+        if(o.weight > 1){ o.weight--; saveData(); renderOptList(); drawWheel(); }
+      });
+      wc.appendChild(minus);
+
+      var val = document.createElement('div');
+      val.className = 'weight-val';
+      val.textContent = o.weight;
+      wc.appendChild(val);
+
+      var plus = document.createElement('button');
+      plus.className = 'weight-btn';
+      plus.textContent = '+';
+      plus.addEventListener('click', function(){
+        if(o.weight < 20){ o.weight++; saveData(); renderOptList(); drawWheel(); }
+      });
+      wc.appendChild(plus);
+
+      row.appendChild(wc);
+
+      var del = document.createElement('button');
+      del.className = 'del-btn';
+      del.textContent = '✕';
+      del.addEventListener('click', function(){
+        wheel.options.splice(idx,1);
+        saveData();
+        renderOptList();
+        drawWheel();
+      });
+      row.appendChild(del);
+
+      optList.appendChild(row);
+    });
+  }
+
+  // ---------- Draw wheel on canvas ----------
+  function drawWheel(){
+    var wheel = getActiveWheel();
+    var size = canvas.width;
+    var cx = size/2, cy = size/2;
+    var radius = size/2 - 6;
+
+    ctx.clearRect(0,0,size,size);
+
+    if(!wheel || wheel.options.length === 0){
+      ctx.beginPath();
+      ctx.arc(cx,cy,radius,0,Math.PI*2);
+      ctx.fillStyle = "#15181B";
+      ctx.fill();
+      ctx.strokeStyle = "#2A2F34";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.fillStyle = "#8A9096";
+      ctx.font = "600 20px -apple-system, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("Add options", cx, cy);
+      return;
+    }
+
+    var totalWeight = wheel.options.reduce(function(s,o){return s+o.weight;},0);
+    var start = rotation - Math.PI/2; // 0 rad = top, offset so pointer(top) is start reference
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rotation);
+    ctx.translate(-cx, -cy);
+
+    var angleCursor = -Math.PI/2;
+    wheel.options.forEach(function(o, idx){
+      var slice = (o.weight/totalWeight) * Math.PI*2;
+      ctx.beginPath();
+      ctx.moveTo(cx,cy);
+      ctx.arc(cx,cy,radius, angleCursor, angleCursor+slice);
+      ctx.closePath();
+      ctx.fillStyle = COLORS[idx % COLORS.length];
+      ctx.fill();
+      ctx.strokeStyle = "#0B0D0F";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // label
+      var mid = angleCursor + slice/2;
+      ctx.save();
+      ctx.translate(cx,cy);
+      ctx.rotate(mid);
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "#0B0D0F";
+      var fontSize = Math.max(13, Math.min(22, size*0.032));
+      ctx.font = "700 " + fontSize + "px -apple-system, sans-serif";
+      var label = o.name.length > 16 ? o.name.slice(0,15)+"…" : o.name;
+      ctx.fillText(label, radius - 16, 0);
+      ctx.restore();
+
+      angleCursor += slice;
+    });
+
+    // hub ring
+    ctx.beginPath();
+    ctx.arc(cx,cy, radius*0.05, 0, Math.PI*2);
+    ctx.fillStyle = "#0B0D0F";
+    ctx.fill();
+
+    ctx.restore();
+
+    // outer ring
+    ctx.beginPath();
+    ctx.arc(cx,cy,radius,0,Math.PI*2);
+    ctx.strokeStyle = "#0B0D0F";
+    ctx.lineWidth = 6;
+    ctx.stroke();
+  }
+
+  // ---------- Spin logic ----------
+  function spin(){
+    var wheel = getActiveWheel();
+    if(!wheel || wheel.options.length < 2 || spinning) return;
+
+    spinning = true;
+    spinBtn.classList.add('spinning');
+    spinBtn.textContent = "···";
+    resultArea.innerHTML = '<div class="result-hint">Spinning…</div>';
+
+    var totalWeight = wheel.options.reduce(function(s,o){return s+o.weight;},0);
+    var r = Math.random() * totalWeight;
+    var acc = 0;
+    var winnerIdx = 0;
+    var winnerStartAngle = 0, winnerSlice = 0;
+    var angleCursor = 0;
+    for(var i=0;i<wheel.options.length;i++){
+      var slice = (wheel.options[i].weight/totalWeight) * Math.PI*2;
+      if(r >= acc && r < acc + wheel.options[i].weight){
+        winnerIdx = i;
+        winnerStartAngle = angleCursor;
+        winnerSlice = slice;
+      }
+      acc += wheel.options[i].weight;
+      angleCursor += slice;
+    }
+
+    // Land at a random point WITHIN the winning slice — not dead center every time.
+    // Keep a small margin from each edge so it never looks like it clipped a neighbor.
+    var edgeMargin = winnerSlice * 0.16;
+    var landOffset = edgeMargin + Math.random() * (winnerSlice - edgeMargin*2);
+    var trueTarget = (-Math.PI/2) + winnerStartAngle + landOffset;
+
+    var extraSpins = 8 + Math.floor(Math.random()*4); // 8-11 full turns — proper wheel-of-fortune length
+    var targetMod = (-Math.PI/2) - trueTarget;
+    targetMod = ((targetMod % (Math.PI*2)) + Math.PI*2) % (Math.PI*2); // normalize to [0, 2PI)
+    var startRotation = rotation;
+    var endRotation = startRotation - (startRotation % (Math.PI*2)) + extraSpins*Math.PI*2 + targetMod;
+    if(endRotation < startRotation) endRotation += Math.PI*2;
+
+    var duration = 5600 + Math.random()*900;
+    var startTime = null;
+
+    // Real deceleration curve: quick ramp up, then a long, smooth friction-style coast to a stop.
+    // Blends a short ease-in with a quintic ease-out so it doesn't feel like it "snaps" into motion or halts abruptly.
+    function ease(t){
+      var rampIn = Math.min(1, t / 0.06);
+      var accel = rampIn * rampIn; // quick spin-up over first 6% of duration
+      var decel = 1 - Math.pow(1 - t, 5); // long quintic coast to a stop
+      return t < 0.06 ? accel * decel : decel;
+    }
+
+    // Precompute cumulative slice boundaries (absolute angle, unrotated frame) for tick detection.
+    var boundaries = [];
+    (function(){
+      var c = -Math.PI/2;
+      var tw = wheel.options.reduce(function(s,o){return s+o.weight;},0);
+      wheel.options.forEach(function(o){
+        boundaries.push(c);
+        c += (o.weight/tw) * Math.PI*2;
+      });
+    })();
+
+    function tickIfCrossedBoundary(prevRot, curRot){
+      // pointer sits at -PI/2 in screen space; a boundary at angle b (unrotated) aligns with pointer when b + rotation ≡ -PI/2 (mod 2PI)
+      // i.e. rotation ≡ -PI/2 - b (mod 2PI). Check if we crossed any such rotation value between prevRot and curRot.
+      for(var i=0;i<boundaries.length;i++){
+        var target = (((-Math.PI/2) - boundaries[i]) % (Math.PI*2) + Math.PI*2) % (Math.PI*2);
+        // find the nearest occurrence of `target` (mod 2PI) within (prevRot, curRot]
+        var base = Math.floor(prevRot / (Math.PI*2)) * (Math.PI*2);
+        var candidate = base + target;
+        while(candidate <= prevRot) candidate += Math.PI*2;
+        if(candidate <= curRot){
+          if(navigator.vibrate) navigator.vibrate(8);
+          return;
+        }
+      }
+    }
+
+    function frame(ts){
+      if(!startTime) startTime = ts;
+      var elapsed = ts - startTime;
+      var t = Math.min(1, elapsed/duration);
+      var eased = ease(t);
+      var prevRotation = rotation;
+      rotation = startRotation + (endRotation - startRotation) * eased;
+      if(t < 0.97) tickIfCrossedBoundary(prevRotation, rotation); // skip ticking right at the very end for a clean stop
+      drawWheel();
+      if(t < 1){
+        requestAnimationFrame(frame);
+      }else{
+        rotation = endRotation;
+        drawWheel();
+        finishSpin(wheel.options[winnerIdx]);
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function finishSpin(winner){
+    spinning = false;
+    spinBtn.classList.remove('spinning');
+    spinBtn.textContent = "SPIN";
+    resultArea.innerHTML = '<div class="result-text">🏁 ' + escapeHtml(winner.name) + '</div>';
+    if(navigator.vibrate) navigator.vibrate([0, 15, 40, 25]);
+  }
+
+  function escapeHtml(s){
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  // ---------- Events ----------
+  spinBtn.addEventListener('click', spin);
+
+  addOptBtn.addEventListener('click', addOption);
+  newOptInput.addEventListener('keydown', function(e){ if(e.key === 'Enter') addOption(); });
+  function addOption(){
+    var wheel = getActiveWheel();
+    var name = newOptInput.value.trim();
+    if(!name || !wheel) return;
+    wheel.options.push({id:uid(), name:name, weight:1});
+    newOptInput.value = "";
+    saveData();
+    renderOptList();
+    drawWheel();
+  }
+
+  drawerToggle.addEventListener('click', function(){
+    var isOpen = drawer.classList.toggle('open');
+    drawerToggle.textContent = (isOpen ? "▼" : "▲") + " Edit options";
+  });
+
+  wheelSelect.addEventListener('change', function(){
+    data.activeId = wheelSelect.value;
+    rotation = 0;
+    saveData();
+    renderOptList();
+    drawWheel();
+    resultArea.innerHTML = '<div class="result-hint">Add options below, then spin.</div>';
+  });
+
+  newWheelBtn.addEventListener('click', function(){
+    openModal("New wheel name", "", function(name){
+      if(!name) return;
+      var w = {id:uid(), name:name, options:[]};
+      data.wheels.push(w);
+      data.activeId = w.id;
+      saveData();
+      renderWheelSelect();
+      renderOptList();
+      drawWheel();
+    });
+  });
+
+  renameWheelBtn.addEventListener('click', function(){
+    var wheel = getActiveWheel();
+    if(!wheel) return;
+    openModal("Rename wheel", wheel.name, function(name){
+      if(!name) return;
+      wheel.name = name;
+      saveData();
+      renderWheelSelect();
+    });
+  });
+
+  deleteWheelBtn.addEventListener('click', function(){
+    if(data.wheels.length <= 1){
+      alert("Can't delete your last wheel, bro.");
+      return;
+    }
+    var wheel = getActiveWheel();
+    if(!wheel) return;
+    if(!confirm('Delete "' + wheel.name + '"? This can\'t be undone.')) return;
+    data.wheels = data.wheels.filter(function(w){return w.id !== wheel.id;});
+    data.activeId = data.wheels[0].id;
+    saveData();
+    renderWheelSelect();
+    renderOptList();
+    drawWheel();
+  });
+
+  // ---------- Modal ----------
+  var modalCallback = null;
+  function openModal(title, value, cb){
+    modalTitle.textContent = title;
+    modalInput.value = value;
+    modalCallback = cb;
+    modalOverlay.classList.remove('hidden');
+    setTimeout(function(){ modalInput.focus(); }, 50);
+  }
+  function closeModal(){
+    modalOverlay.classList.add('hidden');
+    modalCallback = null;
+  }
+  modalCancel.addEventListener('click', closeModal);
+  modalConfirm.addEventListener('click', function(){
+    var v = modalInput.value.trim();
+    var cb = modalCallback;
+    closeModal();
+    if(cb) cb(v);
+  });
+  modalInput.addEventListener('keydown', function(e){
+    if(e.key === 'Enter') modalConfirm.click();
+  });
+
+  // ---------- Init ----------
+  renderWheelSelect();
+  renderOptList();
+  drawWheel();
+})();
+</script>
+</body>
+</html>
