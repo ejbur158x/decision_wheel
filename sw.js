@@ -1,12 +1,11 @@
-const CACHE_NAME = "indecisive-v6";
+const CACHE_NAME = "indecisive-v7";
 const ASSETS = [
   "./",
   "./index.html",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
-  "./icons/icon-180.png",
-  "./fonts/JosefinSans.woff2"
+  "./icons/icon-180.png"
 ];
 
 self.addEventListener("install", (event) => {
