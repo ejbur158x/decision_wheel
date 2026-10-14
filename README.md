@@ -25,14 +25,14 @@ It's a static site. Open `index.html` through any static server, or use the live
 | File | Purpose |
 |---|---|
 | `index.html` | The whole app (UI, wheel physics, templates, embedded font) |
-| `sw.js` | Service worker for offline use (`CACHE_NAME` is currently `indecisive-v7`) |
-| `icon-180/192/512.png` | App icons |
+| `sw.js` | Service worker for offline use (`CACHE_NAME` is currently `indecisive-v8`) |
+| `manifest.json` | PWA manifest (name, colors, icons) |
+| `icons/` | App icons (180, 192, 512) |
 | `indecisive-logo.png` | Logo lockup |
 | `JosefinSans.woff2`, `OFL-LICENSE.txt` | Font and its license (SIL OFL) |
 
 ## Known issues / to-do
 
-- **Offline install is likely broken.** `sw.js` and `index.html` reference `manifest.json` and an `icons/` folder, but this repo has no `manifest.json` and the icons sit in the repo root. `cache.addAll()` fails if any file 404s, so the service worker probably never installs. Fix: add `manifest.json` and move the icons into `icons/` (or update the paths).
 - `fonts/BricolageGrotesque.woff2` from an earlier version should be deleted from any old deploys.
 - Tick sounds while spinning (iOS Safari has no vibration API).
 - Decide whether templates should also appear in the wheel-selector dropdown, not only the ＋ sheet.

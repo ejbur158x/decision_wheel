@@ -1,4 +1,4 @@
-const CACHE_NAME = "indecisive-v7";
+const CACHE_NAME = "indecisive-v8";
 const ASSETS = [
   "./",
   "./index.html",
